@@ -1,0 +1,42 @@
+# macOS
+.DS_Store
+._*
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+config/local.php
+config/secrets.php
+secrets/
+*.pem
+*.key
+
+# Logs
+*.log
+logs/
+storage/logs/
+
+# Cache and temporary files
+cache/
+tmp/
+temp/
+storage/cache/
+storage/tmp/
+*.cache
+*.tmp
+*.swp
+*~
+
+# IDE and editor metadata
+.idea/
+.vscode/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# PHP dependencies and tooling caches
+vendor/
+.phpunit.result.cache
+.php-cs-fixer.cache
+composer.phar
