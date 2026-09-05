@@ -1,0 +1,41 @@
+CREATE TABLE booking_commission_ledger (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    booking_id BIGINT UNSIGNED NOT NULL,
+    booking_element_id BIGINT UNSIGNED NULL,
+    source_type VARCHAR(20) NOT NULL,
+    instalment_type VARCHAR(30) NOT NULL,
+    amount DECIMAL(13,2) NOT NULL,
+    expected_date DATE NOT NULL,
+    due_date DATE NULL,
+    received_date DATE NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'Expected',
+    notes TEXT NULL,
+    created_by_user_id BIGINT UNSIGNED NOT NULL,
+    updated_by_user_id BIGINT UNSIGNED NOT NULL,
+    created_at_utc TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at_utc TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    -- Source type separates core sentinel 0 from element IDs, including an explicit 0 ID.
+    standard_source_id BIGINT UNSIGNED GENERATED ALWAYS AS (COALESCE(booking_element_id, 0)) STORED,
+    -- NULL exempts exceptional entries from standard-instalment uniqueness.
+    standard_instalment VARCHAR(30) GENERATED ALWAYS AS (CASE WHEN instalment_type IN ('Booking 50%','Travel 50%') THEN instalment_type ELSE NULL END) STORED,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_commission_standard (booking_id, source_type, standard_source_id, standard_instalment),
+    KEY idx_commission_booking_element (booking_id, booking_element_id),
+    KEY idx_commission_element (booking_element_id),
+    KEY idx_commission_expected (status, expected_date),
+    KEY idx_commission_due (status, due_date),
+    KEY idx_commission_creator (created_by_user_id),
+    KEY idx_commission_updater (updated_by_user_id),
+    CONSTRAINT chk_commission_source CHECK (source_type IN ('Core Booking','Booking Element')),
+    CONSTRAINT chk_commission_source_element CHECK ((source_type='Core Booking' AND booking_element_id IS NULL) OR (source_type='Booking Element' AND booking_element_id IS NOT NULL)),
+    CONSTRAINT chk_commission_instalment CHECK (instalment_type IN ('Booking 50%','Travel 50%','Post-Cancellation','Clawback')),
+    CONSTRAINT chk_commission_amount CHECK (amount >= 0),
+    CONSTRAINT chk_commission_status CHECK (status IN ('Expected','Due','Received','Cancelled','Owed')),
+    CONSTRAINT chk_commission_received CHECK (status <> 'Received' OR received_date IS NOT NULL),
+    CONSTRAINT fk_commission_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT fk_commission_element FOREIGN KEY (booking_id, booking_element_id) REFERENCES booking_elements(booking_id, id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT fk_commission_creator FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT fk_commission_updater FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+UPDATE installation_metadata SET schema_version='4.0.4-commission-ledger';

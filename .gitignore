@@ -16,12 +16,18 @@ secrets/
 *.log
 logs/
 storage/logs/
+!storage/logs/
+storage/logs/*
+!storage/logs/.gitkeep
 
 # Cache and temporary files
 cache/
 tmp/
 temp/
 storage/cache/
+!storage/cache/
+storage/cache/*
+!storage/cache/.gitkeep
 storage/tmp/
 *.cache
 *.tmp
@@ -40,3 +46,6 @@ vendor/
 .phpunit.result.cache
 .php-cs-fixer.cache
 composer.phar
+
+# Private booking document bytes (outside public web root)
+storage/private/
