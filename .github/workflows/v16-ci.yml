@@ -21,7 +21,7 @@ jobs:
           MYSQL_PASSWORD: disposable-ci-only
           MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
         ports:
-          - 3306/tcp
+          - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping --host=127.0.0.1 --silent"
           --health-interval=10s
@@ -31,7 +31,7 @@ jobs:
       APP_ENV: test
       APP_TIMEZONE: UTC
       TEST_DB_HOST: 127.0.0.1
-      TEST_DB_PORT: ${{ job.services.mysql.ports[3306] }}
+      TEST_DB_PORT: 3306
       # Exact disposable name required by TestDatabasePolicy and Phase 4 tests.
       TEST_DB_DATABASE: pyh_v16_phase4_test
       TEST_DB_USERNAME: pyh_ci
