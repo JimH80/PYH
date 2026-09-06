@@ -61,10 +61,40 @@ jobs:
         run: find app config public src tests -type f -name '*.php' -print0 | xargs -0 -n 1 php -l
 
       - name: Install canonical test schema
+        env:
+          APP_DEBUG: 'false'
+          APP_LOG_PATH: storage/logs/ci-installer.log
         run: |
+          install_status=0
           DB_HOST="$TEST_DB_HOST" DB_PORT="$TEST_DB_PORT" \
           DB_DATABASE="$TEST_DB_DATABASE" DB_USERNAME="$TEST_DB_USERNAME" \
-          DB_PASSWORD="$TEST_DB_PASSWORD" php app/console.php install
+          DB_PASSWORD="$TEST_DB_PASSWORD" php app/console.php install || install_status=$?
+          if [ "$install_status" -ne 0 ]; then
+            python3 - <<'PY'
+          import json, os, pathlib, re
+          path = pathlib.Path(os.environ['APP_LOG_PATH'])
+          errors = []
+          for line in path.read_text().splitlines() if path.exists() else []:
+              try:
+                  entry = json.loads(line)
+              except ValueError:
+                  continue
+              if entry.get('level') == 'ERROR':
+                  errors.append(entry)
+          if errors:
+              entry = errors[-1]
+              message = str(entry.get('message', ''))
+              for key, value in os.environ.items():
+                  if value and any(word in key.upper() for word in ('PASSWORD', 'SECRET', 'TOKEN', 'USERNAME')):
+                      message = message.replace(value, '[REDACTED]')
+              message = re.sub(r"(['\"]).*?\1", '[REDACTED]', message)
+              message = re.sub(r'(?i)(password|secret|token)\s*[=:]\s*\S+', r'\1=[REDACTED]', message)
+              print('Installer exception: ' + json.dumps({'type': entry.get('context', {}).get('type'), 'message': message}))
+          else:
+              print('Installer failed without a structured application error log.')
+          PY
+            exit "$install_status"
+          fi
 
       - name: PHPUnit
         run: composer test
